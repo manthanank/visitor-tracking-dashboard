@@ -20,7 +20,6 @@ Chart.register(...registerables);
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {
-  // Existing signals
   visitorCounts = signal<VisitorCount[]>([]);
   selectedProject = signal<string>('');
   visitorTrend = signal<any[]>([]);
@@ -30,27 +29,24 @@ export class DashboardComponent implements OnInit {
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
 
-  // New signals for filters
   filteredVisitors = signal<Visitor[]>([]);
-  // Get first day of current month
+
   private getLocaleDateString(date: Date): string {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
       .toISOString()
       .split('T')[0];
   }
 
-  // Update getFirstDayOfMonth method
   private getFirstDayOfMonth(): string {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     return this.getLocaleDateString(firstDay);
   }
 
-  // Initialize filters with current month
   filters = signal<VisitorFilters>({
     startDate: this.getFirstDayOfMonth(),
     endDate: this.getLocaleDateString(new Date()),
-    browser: '',
+    browser: 'All',
   });
 
   trendChart: Chart | null = null;
@@ -84,11 +80,10 @@ export class DashboardComponent implements OnInit {
 
   loadVisitorCounts() {
     this.visitorService.getTotalVisitors().subscribe((data) => {
-      this.visitorCounts.set(data);
-      if (data.length > 0) {
-        this.selectedProject.set(data[0].projectName);
-        this.loadProjectData();
-      }
+      const allOption = { projectName: 'All', uniqueVisitors: 0 };
+      this.visitorCounts.set([allOption, ...data]);
+      this.selectedProject.set('All');
+      this.loadProjectData();
     });
   }
 
@@ -96,7 +91,6 @@ export class DashboardComponent implements OnInit {
     const currentProject = this.selectedProject();
     if (!currentProject) return;
 
-    // Load visitor trend
     this.visitorService
       .getVisitorTrend(currentProject, this.period())
       .subscribe((data) => {
@@ -104,14 +98,12 @@ export class DashboardComponent implements OnInit {
         this.updateTrendChart();
       });
 
-    // Load visitor statistics
     this.visitorService
       .getVisitorStatistics(currentProject)
       .subscribe((data) => {
         this.visitorStats.set(data);
       });
 
-    // Load visitor count for specific project
     this.visitorService.getVisitorCount(currentProject).subscribe((data) => {
       const counts = [...this.visitorCounts()];
       const index = counts.findIndex((c) => c.projectName === currentProject);
@@ -121,7 +113,6 @@ export class DashboardComponent implements OnInit {
       }
     });
 
-    // Load filtered visitors
     this.loadFilteredVisitors();
   }
 
@@ -136,13 +127,11 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  // Add new computed property
   hasValidDateRange = computed(() => {
     const { startDate, endDate } = this.filters();
     return startDate && endDate;
   });
 
-  // Add to component class
   setDateRange(range: 'today' | 'week' | 'month' | 'year') {
     const today = new Date();
     const endDate = today.toISOString().split('T')[0];
@@ -168,14 +157,12 @@ export class DashboardComponent implements OnInit {
     this.updateFilters({ startDate, endDate });
   }
 
-  // Add methods to update filters
   updateFilters(newFilters: Partial<VisitorFilters>) {
     this.filters.update((current) => ({
       ...current,
       ...newFilters,
     }));
 
-    // Only load visitors if both dates are set
     if (this.hasValidDateRange()) {
       this.loadFilteredVisitors();
     }

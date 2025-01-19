@@ -19,10 +19,6 @@ export class VisitorService {
 
   private http = inject(HttpClient);
 
-  getAllVisitors(): Observable<VisitorCount[]> {
-    return this.http.get<VisitorCount[]>(`${this.apiUrl}/visits`);
-  }
-
   getTotalVisitors(): Observable<VisitorCount[]> {
     return this.http.get<VisitorCount[]>(`${this.apiUrl}/total-visits`);
   }

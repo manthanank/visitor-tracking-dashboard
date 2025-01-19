@@ -75,7 +75,7 @@
                             <label class="block text-sm mb-1 dark:text-gray-300">Browser</label>
                             <select [ngModel]="filters().browser" (ngModelChange)="updateFilters({browser: $event})"
                                 class="w-full rounded border p-2 dark:bg-gray-700">
-                                <option value="" selected>All Browsers</option>
+                                <option value="All" selected>All Browsers</option>
                                 <option value="Chrome">Chrome</option>
                                 <option value="Firefox">Firefox</option>
                                 <option value="Safari">Safari</option>
