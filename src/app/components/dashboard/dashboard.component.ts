@@ -83,7 +83,7 @@ export class DashboardComponent implements OnInit {
   }
 
   loadVisitorCounts() {
-    this.visitorService.getAllVisitors().subscribe((data) => {
+    this.visitorService.getTotalVisitors().subscribe((data) => {
       this.visitorCounts.set(data);
       if (data.length > 0) {
         this.selectedProject.set(data[0].projectName);

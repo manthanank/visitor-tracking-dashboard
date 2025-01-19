@@ -23,6 +23,10 @@ export class VisitorService {
     return this.http.get<VisitorCount[]>(`${this.apiUrl}/visits`);
   }
 
+  getTotalVisitors(): Observable<VisitorCount[]> {
+    return this.http.get<VisitorCount[]>(`${this.apiUrl}/total-visits`);
+  }
+
   getVisitorCount(projectName: string): Observable<VisitorCount> {
     return this.http.get<VisitorCount>(`${this.apiUrl}/visit/${projectName}`);
   }
