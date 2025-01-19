@@ -1,0 +1,157 @@
+<div class="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+    <!-- Top Bar -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold dark:text-white">Visitor Analytics</h1>
+                <div class="flex items-center space-x-4">
+                    <select [ngModel]="selectedProject()" (ngModelChange)="onProjectChange($event)"
+                        class="px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600">
+                        @for (count of visitorCounts(); track count.projectName) {
+                        <option [value]="count.projectName">{{count.projectName}}</option>
+                        }
+                    </select>
+                    <button (click)="toggleDarkMode()" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700">
+                        <span class="material-icons">{{isDarkMode() ? 'light_mode' : 'dark_mode'}}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <div class="lg:grid lg:grid-cols-12 lg:gap-6">
+            <!-- Side Panel -->
+            <aside class="lg:col-span-3 space-y-6">
+                <!-- Filters Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <h2 class="font-semibold mb-4 dark:text-white">Filters</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm mb-1 dark:text-gray-300">Date Range</label>
+                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                <button (click)="setDateRange('today')"
+                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                                    Today
+                                </button>
+                                <button (click)="setDateRange('week')"
+                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                                    Last 7 Days
+                                </button>
+                                <button (click)="setDateRange('month')"
+                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                                    Last 30 Days
+                                </button>
+                                <button (click)="setDateRange('year')"
+                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                                    This Year
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="relative">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">From</label>
+                                    <input type="date" [ngModel]="filters().startDate"
+                                        (ngModelChange)="updateFilters({startDate: $event})"
+                                        [class]="'w-full rounded-lg border p-2 dark:bg-gray-700 dark:text-white transition-all duration-200 ' + 
+                                                    (!filters().startDate ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600') + 
+                                                    ' focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-500'">
+                                </div>
+                                <div class="relative">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">To</label>
+                                    <input type="date" [ngModel]="filters().endDate"
+                                        (ngModelChange)="updateFilters({endDate: $event})"
+                                        [class]="'w-full rounded-lg border p-2 dark:bg-gray-700 dark:text-white transition-all duration-200 ' + 
+                                                    (!filters().endDate ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600') + 
+                                                    ' focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-500'">
+                                </div>
+                            </div>
+                            @if (!hasValidDateRange()) {
+                            <div class="text-xs text-red-500 mt-1">
+                                Please select both start and end dates
+                            </div>
+                            }
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1 dark:text-gray-300">Browser</label>
+                            <select [ngModel]="filters().browser" (ngModelChange)="updateFilters({browser: $event})"
+                                class="w-full rounded border p-2 dark:bg-gray-700">
+                                <option value="" selected>All Browsers</option>
+                                <option value="Chrome">Chrome</option>
+                                <option value="Firefox">Firefox</option>
+                                <option value="Safari">Safari</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <h2 class="font-semibold mb-4 dark:text-white">Quick Stats</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm text-gray-500 dark:text-gray-400">Total Visitors</label>
+                            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{totalVisitors()}}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500 dark:text-gray-400">Most Used Browser</label>
+                            <p class="text-lg dark:text-white">{{mostUsedBrowser()}}</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="lg:col-span-9 space-y-6 mt-6 lg:mt-0">
+                <!-- Chart -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold dark:text-white">Visitor Trend</h2>
+                        <select [ngModel]="period()" (ngModelChange)="onPeriodChange($event)"
+                            class="rounded border p-2 dark:bg-gray-700">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <canvas id="trendChart" class="w-full"></canvas>
+                </div>
+
+                <!-- Visitors Table -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                    <div class="p-4 border-b dark:border-gray-700">
+                        <h2 class="font-semibold dark:text-white">Recent Visitors</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 dark:bg-gray-900">
+                                <tr>
+                                    <th class="p-4 text-left text-sm font-medium text-gray-500">IP Address</th>
+                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Browser</th>
+                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Device</th>
+                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Last Visit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (visitor of filteredVisitors(); track visitor._id) {
+                                <tr class="border-t dark:border-gray-700">
+                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.ipAddress || 'Unknown'}}</td>
+                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.browser || 'Unknown'}}</td>
+                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.device || 'Unknown'}}</td>
+                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.lastVisit | date}}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-8 border-t dark:border-gray-800">
+        <div class="container mx-auto px-4 py-6 text-center text-gray-600 dark:text-gray-400">
+            &copy; {{currentYear()}} Visitor Analytics Dashboard
+        </div>
+    </footer>
+</div>
