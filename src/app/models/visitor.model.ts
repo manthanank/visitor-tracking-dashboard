@@ -26,6 +26,7 @@ export interface VisitorStatistics {
 
 export interface VisitorFilters {
   projectName?: string;
+  location?: string;
   startDate?: string;
   endDate?: string;
   browser?: string;
@@ -33,3 +34,17 @@ export interface VisitorFilters {
 }
 
 export type Period = 'daily' | 'weekly' | 'monthly';
+
+export type Locations = Location[]
+
+export interface Location {
+  location?: string
+  visitorCount: number
+}
+
+export type Devices = Device[]
+
+export interface Device {
+  device?: string
+  visitorCount: number
+}

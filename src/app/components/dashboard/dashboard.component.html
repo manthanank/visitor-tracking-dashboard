@@ -109,12 +109,33 @@
                         </div>
                         <div>
                             <label class="block text-sm mb-1 dark:text-gray-300">Browser</label>
-                            <select [ngModel]="filters().browser" (ngModelChange)="updateFilters({browser: $event})"
+                            <select [ngModel]="selectedBrowser()" (ngModelChange)="updateFilters({browser: $event})"
                                 class="w-full rounded border p-2 dark:bg-gray-700">
                                 <option value="All" selected>All Browsers</option>
                                 <option value="Chrome">Chrome</option>
                                 <option value="Firefox">Firefox</option>
                                 <option value="Safari">Safari</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1 dark:text-gray-300">Location</label>
+                            <select [ngModel]="selectedLocation()" (ngModelChange)="onLocationChange($event)"
+                                class="w-full rounded border p-2 dark:bg-gray-700">
+                                @for (count of visitorLocations(); track count.location) {
+                                <option [value]="count.location">{{count.location}}
+                                </option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <!-- devices -->
+                            <label class="block text-sm mb-1 dark:text-gray-300">Device</label>
+                            <select [ngModel]="selectedDevice()" (ngModelChange)="onDeviceChange($event)"
+                                class="w-full rounded border p-2 dark:bg-gray-700">
+                                @for (count of visitorDevices(); track count.device) {
+                                <option [value]="count.device">{{count.device}}
+                                </option>
+                                }
                             </select>
                         </div>
                     </div>
@@ -132,6 +153,7 @@
                                     <th class="p-4 text-left text-sm font-medium text-gray-500">IP Address</th>
                                     <th class="p-4 text-left text-sm font-medium text-gray-500">Browser</th>
                                     <th class="p-4 text-left text-sm font-medium text-gray-500">Device</th>
+                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Location</th>
                                     <th class="p-4 text-left text-sm font-medium text-gray-500">Last Visit</th>
                                 </tr>
                             </thead>
@@ -141,6 +163,7 @@
                                     <td class="p-4 text-sm dark:text-gray-300">{{visitor.ipAddress || 'Unknown'}}</td>
                                     <td class="p-4 text-sm dark:text-gray-300">{{visitor.browser || 'Unknown'}}</td>
                                     <td class="p-4 text-sm dark:text-gray-300">{{visitor.device || 'Unknown'}}</td>
+                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.location || 'Unknown'}}</td>
                                     <td class="p-4 text-sm dark:text-gray-300">{{visitor.lastVisit | date}}</td>
                                 </tr>
                                 }

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Visitor,
@@ -7,7 +7,9 @@ import {
   VisitorTrend,
   VisitorStatistics,
   VisitorFilters,
-  Period
+  Period,
+  Locations,
+  Devices
 } from '../models/visitor.model';
 import { environment } from '../../environments/environment';
 
@@ -25,6 +27,14 @@ export class VisitorService {
 
   getVisitorCount(projectName: string): Observable<VisitorCount> {
     return this.http.get<VisitorCount>(`${this.apiUrl}/visit/${projectName}`);
+  }
+
+  getLocations(): Observable<Locations> {
+    return this.http.get<Locations>(`${this.apiUrl}/locations`);
+  }
+
+  getDevices(): Observable<Devices> {
+    return this.http.get<Devices>(`${this.apiUrl}/devices`);
   }
 
   getVisitorTrend(

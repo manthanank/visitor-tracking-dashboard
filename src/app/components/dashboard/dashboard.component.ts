@@ -22,14 +22,19 @@ Chart.register(...registerables);
 export class DashboardComponent implements OnInit {
   visitorCounts = signal<VisitorCount[]>([]);
   selectedProject = signal<string>('');
+  selectedLocation = signal<string>('All');
+  selectedBrowser = signal<string>('All');
+  selectedDevice = signal<string>('All');
   visitorTrend = signal<any[]>([]);
   visitorStats = signal<VisitorStatistics | null>(null);
   period = signal<Period>('daily');
   isDarkMode = signal<boolean>(
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
-
   filteredVisitors = signal<Visitor[]>([]);
+  visitorLocations = signal<any[]>([]);
+  visitorDevices = signal<any[]>([]);
+  trendChart: Chart | null = null;
 
   private getLocaleDateString(date: Date): string {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -44,12 +49,13 @@ export class DashboardComponent implements OnInit {
   }
 
   filters = signal<VisitorFilters>({
+    projectName: this.selectedProject(),
+    location: this.selectedLocation(),
     startDate: this.getFirstDayOfMonth(),
     endDate: this.getLocaleDateString(new Date()),
-    browser: 'All',
+    browser: this.selectedBrowser(),
+    device: this.selectedDevice(),
   });
-
-  trendChart: Chart | null = null;
 
   totalVisitors = computed(() => {
     return (
@@ -114,12 +120,36 @@ export class DashboardComponent implements OnInit {
     });
 
     this.loadFilteredVisitors();
+    this.loadVisitorLocations();
+    this.loadVisitorDevices();
+  }
+
+  loadVisitorLocations() {
+    this.visitorService.getLocations().subscribe((data) => {
+      const allOption = { location: 'All', visitorCount: 0 };
+      data = data.filter((loc) => loc.location);
+      this.visitorLocations.set([allOption, ...data]);
+      this.selectedLocation.set('All');
+    });
+  }
+
+  loadVisitorDevices() {
+    this.visitorService.getDevices().subscribe((data) => {
+      const allOption = { device: 'All', visitorCount: 0 };
+      data = data.filter((dev) => dev.device);
+      this.visitorDevices.set([allOption, ...data]);
+      this.selectedDevice.set('All');
+    });
   }
 
   loadFilteredVisitors() {
     const currentFilters: VisitorFilters = {
       projectName: this.selectedProject(),
-      ...this.filters(),
+      location: this.selectedLocation(),
+      startDate: this.filters().startDate,
+      endDate: this.filters().endDate,
+      browser: this.filters().browser,
+      device: this.selectedDevice(),
     };
 
     this.visitorService.filterVisitors(currentFilters).subscribe((data) => {
@@ -229,6 +259,16 @@ export class DashboardComponent implements OnInit {
   onPeriodChange(newPeriod: Period) {
     this.period.set(newPeriod);
     this.loadProjectData();
+  }
+
+  onLocationChange(location: string) {
+    this.selectedLocation.set(location);
+    this.loadFilteredVisitors();
+  }
+
+  onDeviceChange(device: string) {
+    this.selectedDevice.set(device);
+    this.loadFilteredVisitors();
   }
 
   toggleDarkMode() {
