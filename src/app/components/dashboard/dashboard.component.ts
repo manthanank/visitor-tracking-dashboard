@@ -72,6 +72,10 @@ export class DashboardComponent implements OnInit {
     return this.visitorStats()?.mostUsedDevice || '';
   });
 
+  mostVisitedLocation = computed(() => {
+    return this.visitorStats()?.mostVisitedLocation || '';
+  });
+
   currentYear = computed(() => new Date().getFullYear());
 
   constructor(private visitorService: VisitorService) {

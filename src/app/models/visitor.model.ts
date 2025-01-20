@@ -22,6 +22,7 @@ export interface VisitorTrend {
 export interface VisitorStatistics {
   mostUsedBrowser: string;
   mostUsedDevice: string;
+  mostVisitedLocation: string;
 }
 
 export interface VisitorFilters {
