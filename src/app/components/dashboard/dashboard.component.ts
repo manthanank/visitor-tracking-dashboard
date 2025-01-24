@@ -1,4 +1,11 @@
-import { Component, OnInit, signal, computed, effect } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  signal,
+  computed,
+  effect,
+} from '@angular/core';
 import {
   Visitor,
   VisitorCount,
@@ -10,6 +17,7 @@ import { VisitorService } from '../../services/visitor.service';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import { DatePipe } from '@angular/common';
+import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
 
@@ -17,14 +25,19 @@ Chart.register(...registerables);
   selector: 'app-dashboard',
   imports: [FormsModule, DatePipe],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.scss',
+  styleUrls: ['./dashboard.component.scss'],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   visitorCounts = signal<VisitorCount[]>([]);
   selectedProject = signal<string>('');
   selectedLocation = signal<string>('All');
   selectedBrowser = signal<string>('All');
   selectedDevice = signal<string>('All');
+  selectedPage = signal<number>(1);
+  selectedLimit = signal<number>(10);
+  totalVisitorsCount = signal<number>(0);
+  totalPages = signal<number>(0);
+  currentPage = signal<number>(1);
   visitorTrend = signal<any[]>([]);
   visitorStats = signal<VisitorStatistics | null>(null);
   period = signal<Period>('daily');
@@ -35,6 +48,7 @@ export class DashboardComponent implements OnInit {
   visitorLocations = signal<any[]>([]);
   visitorDevices = signal<any[]>([]);
   trendChart: Chart | null = null;
+  private subscriptions: Subscription = new Subscription();
 
   private getLocaleDateString(date: Date): string {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -55,6 +69,8 @@ export class DashboardComponent implements OnInit {
     endDate: this.getLocaleDateString(new Date()),
     browser: this.selectedBrowser(),
     device: this.selectedDevice(),
+    page: this.selectedPage(),
+    limit: this.selectedLimit(),
   });
 
   totalVisitors = computed(() => {
@@ -88,40 +104,53 @@ export class DashboardComponent implements OnInit {
     this.loadVisitorCounts();
   }
 
+  ngOnDestroy() {
+    if (this.trendChart) {
+      this.trendChart.destroy();
+    }
+    this.subscriptions.unsubscribe();
+  }
+
   loadVisitorCounts() {
-    this.visitorService.getTotalVisitors().subscribe((data) => {
+    const sub = this.visitorService.getTotalVisitors().subscribe((data) => {
       const allOption = { projectName: 'All', uniqueVisitors: 0 };
       this.visitorCounts.set([allOption, ...data]);
       this.selectedProject.set('All');
       this.loadProjectData();
     });
+    this.subscriptions.add(sub);
   }
 
   loadProjectData() {
     const currentProject = this.selectedProject();
     if (!currentProject) return;
 
-    this.visitorService
+    const trendSub = this.visitorService
       .getVisitorTrend(currentProject, this.period())
       .subscribe((data) => {
         this.visitorTrend.set(data);
         this.updateTrendChart();
       });
+    this.subscriptions.add(trendSub);
 
-    this.visitorService
+    const statsSub = this.visitorService
       .getVisitorStatistics(currentProject)
       .subscribe((data) => {
         this.visitorStats.set(data);
       });
+    this.subscriptions.add(statsSub);
 
-    this.visitorService.getVisitorCount(currentProject).subscribe((data) => {
-      const counts = [...this.visitorCounts()];
-      const index = counts.findIndex((c) => c.projectName === currentProject);
-      if (index !== -1) {
-        counts[index] = data;
-        this.visitorCounts.set(counts);
-      }
-    });
+    const countSub = this.visitorService
+      .getVisitorCount(currentProject)
+      .subscribe((data) => {
+        const counts = [...this.visitorCounts()];
+        const index = counts.findIndex((c) => c.projectName === currentProject);
+        if (index !== -1) {
+          counts[index] = data;
+          this.visitorCounts.set(counts);
+        }
+      });
+    this.subscriptions.add(countSub);
 
     this.loadFilteredVisitors();
     this.loadVisitorLocations();
@@ -129,21 +158,23 @@ export class DashboardComponent implements OnInit {
   }
 
   loadVisitorLocations() {
-    this.visitorService.getLocations().subscribe((data) => {
+    const sub = this.visitorService.getLocations().subscribe((data) => {
       const allOption = { location: 'All', visitorCount: 0 };
       data = data.filter((loc) => loc.location);
       this.visitorLocations.set([allOption, ...data]);
       this.selectedLocation.set('All');
     });
+    this.subscriptions.add(sub);
   }
 
   loadVisitorDevices() {
-    this.visitorService.getDevices().subscribe((data) => {
+    const sub = this.visitorService.getDevices().subscribe((data) => {
       const allOption = { device: 'All', visitorCount: 0 };
       data = data.filter((dev) => dev.device);
       this.visitorDevices.set([allOption, ...data]);
       this.selectedDevice.set('All');
     });
+    this.subscriptions.add(sub);
   }
 
   loadFilteredVisitors() {
@@ -154,11 +185,17 @@ export class DashboardComponent implements OnInit {
       endDate: this.filters().endDate,
       browser: this.filters().browser,
       device: this.selectedDevice(),
+      page: this.selectedPage(),
+      limit: this.selectedLimit(),
     };
 
-    this.visitorService.filterVisitors(currentFilters).subscribe((data) => {
-      this.filteredVisitors.set(data);
-    });
+    const sub = this.visitorService
+      .filterVisitors(currentFilters)
+      .subscribe((data) => {
+        this.filteredVisitors.set(data.visitors);
+        this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
+      });
+    this.subscriptions.add(sub);
   }
 
   hasValidDateRange = computed(() => {
@@ -274,6 +311,26 @@ export class DashboardComponent implements OnInit {
     this.selectedDevice.set(device);
     this.loadFilteredVisitors();
   }
+
+  previousPage() {
+    this.selectedPage.update((current) => current - 1);
+    this.updateFilters({ page: this.selectedPage() });
+  }
+
+  nextPage() {
+    this.selectedPage.update((current) => current + 1);
+    this.updateFilters({ page: this.selectedPage() });
+  }
+
+  hasPreviousPage = computed(() => {
+    return this.selectedPage() > 1;
+  });
+
+  hasNextPage = computed(() => {
+    const { page, limit } = this.filters();
+    const total = this.totalVisitorsCount();
+    return total > (page ?? 0) * (limit ?? 0);
+  });
 
   toggleDarkMode() {
     this.isDarkMode.update((current) => !current);

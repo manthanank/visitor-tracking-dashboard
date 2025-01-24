@@ -9,7 +9,8 @@ import {
   VisitorFilters,
   Period,
   Locations,
-  Devices
+  Devices,
+  Visitors,
 } from '../models/visitor.model';
 import { environment } from '../../environments/environment';
 
@@ -52,8 +53,8 @@ export class VisitorService {
     );
   }
 
-  filterVisitors(filters: VisitorFilters): Observable<Visitor[]> {
-    return this.http.get<Visitor[]>(`${this.apiUrl}/filter-visit`, {
+  filterVisitors(filters: VisitorFilters): Observable<Visitors> {
+    return this.http.get<Visitors>(`${this.apiUrl}/filter-visit`, {
       params: filters as any,
     });
   }

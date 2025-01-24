@@ -178,16 +178,31 @@
                                 }
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
 
-    <!-- Footer -->
-    <footer class="mt-8 border-t dark:border-gray-800">
-        <div class="container mx-auto px-4 py-6 text-center text-gray-600 dark:text-gray-400">
-            &copy; {{currentYear()}} Visitor Analytics Dashboard
+                        <!-- Pagination -->
+                        @if (
+                        filteredVisitors().length > 0 && filteredVisitors().length < totalVisitors() ) { <div
+                            class="p-4 border-t dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <button (click)="previousPage()"
+                                    class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    [disabled]="!hasPreviousPage()">Previous</button>
+                                <button (click)="nextPage()"
+                                    class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    [disabled]="!hasNextPage()">Next</button>
+                            </div>
+                    </div>
+                    }
+                </div>
         </div>
-    </footer>
+        </main>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="mt-8 border-t dark:border-gray-800">
+    <div class="container mx-auto px-4 py-6 text-center text-gray-600 dark:text-gray-400">
+        &copy; {{currentYear()}} Visitor Analytics Dashboard
+    </div>
+</footer>
 </div>
