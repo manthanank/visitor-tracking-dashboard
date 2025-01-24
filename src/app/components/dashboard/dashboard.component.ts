@@ -18,12 +18,13 @@ import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
+import { FooterComponent } from "../../shared/footer/footer.component";
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, FooterComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
@@ -49,6 +50,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   visitorDevices = signal<any[]>([]);
   trendChart: Chart | null = null;
   private subscriptions: Subscription = new Subscription();
+  loading = signal<boolean>(false);
+  error = signal<string | null>(null);
 
   private getLocaleDateString(date: Date): string {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -92,8 +95,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.visitorStats()?.mostVisitedLocation || '';
   });
 
-  currentYear = computed(() => new Date().getFullYear());
-
   constructor(private visitorService: VisitorService) {
     effect(() => {
       this.applyTheme();
@@ -112,11 +113,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadVisitorCounts() {
-    const sub = this.visitorService.getTotalVisitors().subscribe((data) => {
-      const allOption = { projectName: 'All', uniqueVisitors: 0 };
-      this.visitorCounts.set([allOption, ...data]);
-      this.selectedProject.set('All');
-      this.loadProjectData();
+    this.loading.set(true);
+    this.error.set(null);
+    const sub = this.visitorService.getTotalVisitors().subscribe({
+      next: (data) => {
+        const allOption = { projectName: 'All', uniqueVisitors: 0 };
+        this.visitorCounts.set([allOption, ...data]);
+        this.selectedProject.set('All');
+        this.loadProjectData();
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load visitor counts');
+        this.loading.set(false);
+      },
     });
     this.subscriptions.add(sub);
   }
@@ -125,30 +135,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const currentProject = this.selectedProject();
     if (!currentProject) return;
 
+    this.loading.set(true);
+    this.error.set(null);
+
     const trendSub = this.visitorService
       .getVisitorTrend(currentProject, this.period())
-      .subscribe((data) => {
-        this.visitorTrend.set(data);
-        this.updateTrendChart();
+      .subscribe({
+        next: (data) => {
+          this.visitorTrend.set(data);
+          this.updateTrendChart();
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set('Failed to load visitor trend');
+          this.loading.set(false);
+        },
       });
     this.subscriptions.add(trendSub);
 
     const statsSub = this.visitorService
       .getVisitorStatistics(currentProject)
-      .subscribe((data) => {
-        this.visitorStats.set(data);
+      .subscribe({
+        next: (data) => {
+          this.visitorStats.set(data);
+        },
+        error: (err) => {
+          this.error.set('Failed to load visitor statistics');
+        },
       });
     this.subscriptions.add(statsSub);
 
     const countSub = this.visitorService
       .getVisitorCount(currentProject)
-      .subscribe((data) => {
-        const counts = [...this.visitorCounts()];
-        const index = counts.findIndex((c) => c.projectName === currentProject);
-        if (index !== -1) {
-          counts[index] = data;
-          this.visitorCounts.set(counts);
-        }
+      .subscribe({
+        next: (data) => {
+          const counts = [...this.visitorCounts()];
+          const index = counts.findIndex((c) => c.projectName === currentProject);
+          if (index !== -1) {
+            counts[index] = data;
+            this.visitorCounts.set(counts);
+          }
+        },
+        error: (err) => {
+          this.error.set('Failed to load visitor count');
+        },
       });
     this.subscriptions.add(countSub);
 
@@ -158,21 +188,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadVisitorLocations() {
-    const sub = this.visitorService.getLocations().subscribe((data) => {
-      const allOption = { location: 'All', visitorCount: 0 };
-      data = data.filter((loc) => loc.location);
-      this.visitorLocations.set([allOption, ...data]);
-      this.selectedLocation.set('All');
+    this.loading.set(true);
+    this.error.set(null);
+
+    const sub = this.visitorService.getLocations().subscribe({
+      next: (data) => {
+        const allOption = { location: 'All', visitorCount: 0 };
+        data = data.filter((loc) => loc.location);
+        this.visitorLocations.set([allOption, ...data]);
+        this.selectedLocation.set('All');
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load visitor locations');
+        this.loading.set(false);
+      },
     });
     this.subscriptions.add(sub);
   }
 
   loadVisitorDevices() {
-    const sub = this.visitorService.getDevices().subscribe((data) => {
-      const allOption = { device: 'All', visitorCount: 0 };
-      data = data.filter((dev) => dev.device);
-      this.visitorDevices.set([allOption, ...data]);
-      this.selectedDevice.set('All');
+    this.loading.set(true);
+    this.error.set(null);
+
+    const sub = this.visitorService.getDevices().subscribe({
+      next: (data) => {
+        const allOption = { device: 'All', visitorCount: 0 };
+        data = data.filter((dev) => dev.device);
+        this.visitorDevices.set([allOption, ...data]);
+        this.selectedDevice.set('All');
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load visitor devices');
+        this.loading.set(false);
+      },
     });
     this.subscriptions.add(sub);
   }
@@ -189,11 +239,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
       limit: this.selectedLimit(),
     };
 
+    this.loading.set(true);
+    this.error.set(null);
+
     const sub = this.visitorService
       .filterVisitors(currentFilters)
-      .subscribe((data) => {
-        this.filteredVisitors.set(data.visitors);
-        this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
+      .subscribe({
+        next: (data) => {
+          this.filteredVisitors.set(data.visitors);
+          this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set('Failed to load filtered visitors');
+          this.loading.set(false);
+        },
       });
     this.subscriptions.add(sub);
   }
