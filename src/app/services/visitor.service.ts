@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Visitor,
@@ -11,6 +11,12 @@ import {
   Locations,
   Devices,
   Visitors,
+  ActiveVisitors,
+  BrowserOsStats,
+  VisitorGrowth,
+  VisitorsByDateRange,
+  VisitorByIp,
+  DailyActiveUsers,
 } from '../models/visitor.model';
 import { environment } from '../../environments/environment';
 
@@ -57,5 +63,91 @@ export class VisitorService {
     return this.http.get<Visitors>(`${this.apiUrl}/filter-visit`, {
       params: filters as any,
     });
+  }
+
+  trackVisitor(projectName: string): Observable<{
+    message: string;
+    projectName: string;
+    uniqueVisitors: number;
+  }> {
+    return this.http.post<{
+      message: string;
+      projectName: string;
+      uniqueVisitors: number;
+    }>(`${this.apiUrl}/visit`, { projectName });
+  }
+
+  getAllVisitors(): Observable<Visitor[]> {
+    return this.http.get<Visitor[]>(`${this.apiUrl}/visits`);
+  }
+
+  updateVisitor(
+    id: string,
+    visitorData: Partial<Visitor>
+  ): Observable<Visitor> {
+    return this.http.put<Visitor>(`${this.apiUrl}/visit/${id}`, visitorData);
+  }
+
+  deleteVisitor(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/visit/${id}`);
+  }
+
+  getVisitorByIp(ipAddress: string): Observable<VisitorByIp> {
+    return this.http.get<VisitorByIp>(`${this.apiUrl}/visit-ip/${ipAddress}`);
+  }
+
+  getVisitorsByDateRange(
+    startDate: string,
+    endDate: string
+  ): Observable<VisitorsByDateRange> {
+    let params = new HttpParams()
+      .set('startDate', startDate)
+      .set('endDate', endDate);
+
+    return this.http.get<VisitorsByDateRange>(`${this.apiUrl}/visits-by-date`, {
+      params,
+    });
+  }
+
+  getUniqueVisitorsDaily(
+    projectName: string,
+    startDate?: string,
+    endDate?: string
+  ): Observable<DailyActiveUsers> {
+    let params = new HttpParams();
+
+    if (startDate) params = params.set('startDate', startDate);
+    if (endDate) params = params.set('endDate', endDate);
+
+    return this.http.get<DailyActiveUsers>(
+      `${this.apiUrl}/unique-visitors-daily/${projectName}`,
+      { params }
+    );
+  }
+
+  getActiveVisitors(minutes: number = 5): Observable<ActiveVisitors> {
+    return this.http.get<ActiveVisitors>(
+      `${this.apiUrl}/active-visitors?minutes=${minutes}`
+    );
+  }
+
+  getBrowserOsStats(): Observable<BrowserOsStats> {
+    return this.http.get<BrowserOsStats>(`${this.apiUrl}/browser-os-stats`);
+  }
+
+  exportVisitors(format: 'json' | 'csv' = 'json'): Observable<any> {
+    if (format === 'csv') {
+      return this.http.get(`${this.apiUrl}/export-visitors?format=${format}`, {
+        responseType: 'text',
+      });
+    } else {
+      return this.http.get<any>(
+        `${this.apiUrl}/export-visitors?format=${format}`
+      );
+    }
+  }
+
+  getVisitorGrowth(): Observable<VisitorGrowth[]> {
+    return this.http.get<VisitorGrowth[]>(`${this.apiUrl}/visitor-growth`);
   }
 }

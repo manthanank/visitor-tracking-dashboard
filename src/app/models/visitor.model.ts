@@ -58,3 +58,40 @@ export interface Device {
   device?: string;
   visitorCount: number;
 }
+
+export interface VisitorByIp {
+  visitors: Visitor[];
+}
+
+export interface VisitorsByDateRange {
+  startDate: string;
+  endDate: string;
+  visitorCount: number;
+  visitors: Visitor[];
+}
+
+export interface DailyActiveUsers {
+  projectName: string;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  dailyActiveUsers: Array<{
+    date: string;
+    uniqueVisitors: number;
+  }>;
+}
+
+export interface ActiveVisitors {
+  activeVisitors: Visitor[];
+}
+
+export interface BrowserOsStats {
+  browserStats: Array<{ _id: string; count: number }>;
+  osStats: Array<{ _id: string; count: number }>;
+}
+
+export interface VisitorGrowth {
+  _id: string;
+  count: number;
+}

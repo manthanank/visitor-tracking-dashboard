@@ -1,214 +1,267 @@
-<div class="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-    <!-- Top Bar -->
-    <header class="bg-white dark:bg-gray-800 shadow-sm">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold dark:text-white">Visitor Analytics</h1>
-                <div class="flex items-center space-x-4">
-                    @if (visitorCounts().length > 0 && visitorCounts().length > 1) {
-                    <select [ngModel]="selectedProject()" (ngModelChange)="onProjectChange($event)"
-                        class="px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600">
-                        @for (count of visitorCounts(); track count.projectName) {
-                        <option [value]="count.projectName">{{count.projectName}}</option>
-                        }
-                    </select>
-                    }
-                    <button (click)="toggleDarkMode()"
-                        class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 transition-colors duration-200">
-                        <span class="material-icons">{{isDarkMode() ? 'light_mode' : 'dark_mode'}}</span>
-                    </button>
-                </div>
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-all duration-300">
+  <!-- Navigation Bar -->
+  <nav class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <h1 class="text-xl font-semibold dark:text-white">Analytics Dashboard</h1>
+          @if (visitorCounts().length > 0 && visitorCounts().length > 1) {
+            <select 
+              [ngModel]="selectedProject()" 
+              (ngModelChange)="onProjectChange($event)"
+              class="text-sm bg-transparent border border-gray-300 dark:border-gray-600 rounded-full px-4 py-1.5 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent">
+              @for (count of visitorCounts(); track count.projectName) {
+                <option [value]="count.projectName">{{count.projectName}}</option>
+              }
+            </select>
+          }
+        </div>
+        <button 
+          (click)="toggleDarkMode()" 
+          class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <span class="material-icons text-gray-600 dark:text-gray-300">
+            {{isDarkMode() ? 'light_mode' : 'dark_mode'}}
+          </span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container mx-auto px-4 py-6">
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      @if (loading()) {
+        @for (i of [1,2,3,4]; track i) {
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+            <div class="animate-pulse">
+              <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+              <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mt-2"></div>
             </div>
+          </div>
+        }
+      } @else {
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Visitors</div>
+          <div class="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">{{totalVisitors()}}</div>
         </div>
-    </header>
-
-    <div class="container mx-auto px-4 py-6">
-        <div class="lg:grid lg:grid-cols-12 lg:gap-6">
-            <!-- Side Panel -->
-            <aside class="lg:col-span-3 space-y-6">
-                <!-- Quick Stats -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <h2 class="font-semibold mb-4 dark:text-white">Quick Stats</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-sm text-gray-500 dark:text-gray-400">Total Visitors</label>
-                            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{totalVisitors()}}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500 dark:text-gray-400">Most Used Browser</label>
-                            <p class="text-lg dark:text-white">{{mostUsedBrowser()}}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500 dark:text-gray-400">Most Used Device</label>
-                            <p class="text-lg dark:text-white">{{mostUsedDevice() || 'N/A'}}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm text-gray-500 dark:text-gray-400">Most Visited Location</label>
-                            <p class="text-lg dark:text-white">{{mostVisitedLocation() || 'N/A'}}</p>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Main Content -->
-            <main class="lg:col-span-9 space-y-6 mt-6 lg:mt-0">
-                <!-- Loading and Error Messages -->
-                @if (loading()) {
-                <div class="text-center text-blue-500">Loading...</div>
-                }
-                @if (error()) {
-                <div class="text-center text-red-500">{{error()}}</div>
-                }
-
-                <!-- Chart -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="font-semibold dark:text-white">Visitor Trend</h2>
-                        <select [ngModel]="period()" (ngModelChange)="onPeriodChange($event)"
-                            class="rounded border p-2 dark:bg-gray-700">
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                        </select>
-                    </div>
-                    <canvas id="trendChart" class="w-full"></canvas>
-                </div>
-
-                <!-- Filters for Table -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                    <h2 class="font-semibold mb-4 dark:text-white">Filters</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm mb-1 dark:text-gray-300">Date Range</label>
-                            <div class="grid grid-cols-4 gap-2 mb-3">
-                                <button (click)="setDateRange('today')"
-                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
-                                    Today
-                                </button>
-                                <button (click)="setDateRange('week')"
-                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
-                                    Last 7 Days
-                                </button>
-                                <button (click)="setDateRange('month')"
-                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
-                                    Last 30 Days
-                                </button>
-                                <button (click)="setDateRange('year')"
-                                    class="px-3 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
-                                    This Year
-                                </button>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div class="relative">
-                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">From</label>
-                                    <input type="date" [ngModel]="filters().startDate"
-                                        (ngModelChange)="updateFilters({startDate: $event})"
-                                        [class]="'w-full rounded-lg border p-2 dark:bg-gray-700 dark:text-white transition-all duration-200 ' + 
-                                                    (!filters().startDate ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600') + 
-                                                    ' focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-500'">
-                                </div>
-                                <div class="relative">
-                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">To</label>
-                                    <input type="date" [ngModel]="filters().endDate"
-                                        (ngModelChange)="updateFilters({endDate: $event})"
-                                        [class]="'w-full rounded-lg border p-2 dark:bg-gray-700 dark:text-white transition-all duration-200 ' + 
-                                                    (!filters().endDate ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600') + 
-                                                    ' focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-500'">
-                                </div>
-                            </div>
-                            @if (!hasValidDateRange()) {
-                            <div class="text-xs text-red-500 mt-1">
-                                Please select both start and end dates
-                            </div>
-                            }
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1 dark:text-gray-300">Browser</label>
-                            <select [ngModel]="selectedBrowser()" (ngModelChange)="updateFilters({browser: $event})"
-                                class="w-full rounded border p-2 dark:bg-gray-700">
-                                <option value="All" selected>All Browsers</option>
-                                <option value="Chrome">Chrome</option>
-                                <option value="Firefox">Firefox</option>
-                                <option value="Safari">Safari</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1 dark:text-gray-300">Location</label>
-                            <select [ngModel]="selectedLocation()" (ngModelChange)="onLocationChange($event)"
-                                class="w-full rounded border p-2 dark:bg-gray-700">
-                                @for (count of visitorLocations(); track count.location) {
-                                <option [value]="count.location">{{count.location}}
-                                </option>
-                                }
-                            </select>
-                        </div>
-                        <div>
-                            <!-- devices -->
-                            <label class="block text-sm mb-1 dark:text-gray-300">Device</label>
-                            <select [ngModel]="selectedDevice()" (ngModelChange)="onDeviceChange($event)"
-                                class="w-full rounded border p-2 dark:bg-gray-700">
-                                @for (count of visitorDevices(); track count.device) {
-                                <option [value]="count.device">{{count.device}}
-                                </option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Visitors Table -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-                    <div class="p-4 border-b dark:border-gray-700">
-                        <h2 class="font-semibold dark:text-white">Recent Visitors</h2>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th class="p-4 text-left text-sm font-medium text-gray-500">IP Address</th>
-                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Browser</th>
-                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Device</th>
-                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Location</th>
-                                    <th class="p-4 text-left text-sm font-medium text-gray-500">Last Visit</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (visitor of filteredVisitors(); track visitor._id) {
-                                <tr class="border-t dark:border-gray-700">
-                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.ipAddress || 'Unknown'}}</td>
-                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.browser || 'Unknown'}}</td>
-                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.device || 'Unknown'}}</td>
-                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.location || 'Unknown'}}</td>
-                                    <td class="p-4 text-sm dark:text-gray-300">{{visitor.lastVisit | date}}</td>
-                                </tr>
-                                }
-                                @empty {
-                                <tr>
-                                    <td class="p-4 text-sm dark:text-gray-300" colspan="4">No visitors found</td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-
-                        <!-- Pagination -->
-                        @if (
-                        filteredVisitors().length > 0 && filteredVisitors().length < totalVisitors() ) { <div
-                            class="p-4 border-t dark:border-gray-700">
-                            <div class="flex items-center justify-between">
-                                <button (click)="previousPage()"
-                                    class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-                                    [disabled]="!hasPreviousPage()">Previous</button>
-                                <button (click)="nextPage()"
-                                    class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-                                    [disabled]="!hasNextPage()">Next</button>
-                            </div>
-                    </div>
-                    }
-                </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Most Used Browser</div>
+          <div class="mt-2 text-xl font-semibold dark:text-white">{{mostUsedBrowser()}}</div>
         </div>
-        </main>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Most Used Device</div>
+          <div class="mt-2 text-xl font-semibold dark:text-white">{{mostUsedDevice() || 'N/A'}}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Top Location</div>
+          <div class="mt-2 text-xl font-semibold dark:text-white">{{mostVisitedLocation() || 'N/A'}}</div>
+        </div>
+      }
     </div>
 
-    <!-- Footer -->
-    <app-footer></app-footer>
+    <!-- Chart and Filters Section -->
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Chart Area -->
+      <div class="lg:col-span-2">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="font-semibold dark:text-white">Visitor Trends</h2>
+            <div class="flex items-center space-x-2">
+              @for (periodOption of periodOptions; track periodOption) {
+                <button 
+                  (click)="onPeriodChange(periodOption)"
+                  [class]="'px-3 py-1.5 text-sm rounded-full transition-colors ' + 
+                    (period() === periodOption ? 
+                    'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 
+                    'hover:bg-gray-100 dark:hover:bg-gray-700')"
+                >
+                  {{periodOption | titlecase}}
+                </button>
+              }
+            </div>
+          </div>
+          @if (loading()) {
+            <div class="animate-pulse">
+              <div class="h-[300px] bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+          } @else {
+            <canvas id="trendChart" class="w-full"></canvas>
+          }
+        </div>
+      </div>
+
+      <!-- Filters Panel -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <h2 class="font-semibold mb-6 dark:text-white">Filters</h2>
+        @if (loading()) {
+          <div class="animate-pulse space-y-6">
+            <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div class="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+            <div class="space-y-4">
+              @for (i of [1,2,3]; track i) {
+                <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="space-y-6">
+            <!-- Quick Date Filters -->
+            <div class="flex flex-wrap gap-2">
+              @for (range of dateRanges; track range) {
+                <button 
+                  (click)="setDateRange(range)"
+                  class="px-3 py-1.5 text-sm rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                  {{range | titlecase}}
+                </button>
+              }
+            </div>
+
+            <!-- Custom Date Range -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">From</label>
+                <input 
+                  type="date" 
+                  [ngModel]="filters().startDate"
+                  (ngModelChange)="updateFilters({startDate: $event})"
+                  class="w-full rounded-lg border dark:bg-gray-700 dark:border-gray-600 p-2">
+              </div>
+              <div>
+                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">To</label>
+                <input 
+                  type="date" 
+                  [ngModel]="filters().endDate"
+                  (ngModelChange)="updateFilters({endDate: $event})"
+                  class="w-full rounded-lg border dark:bg-gray-700 dark:border-gray-600 p-2">
+              </div>
+            </div>
+
+            <!-- Other Filters -->
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Browser</label>
+                <select 
+                  [ngModel]="selectedBrowser()" 
+                  (ngModelChange)="updateFilters({browser: $event})"
+                  class="w-full rounded-lg border dark:bg-gray-700 dark:border-gray-600 p-2">
+                  <option value="All">All Browsers</option>
+                  @for (browser of availableBrowsers(); track browser) {
+                    <option [value]="browser">{{browser}}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Location</label>
+                <select 
+                  [ngModel]="selectedLocation()" 
+                  (ngModelChange)="onLocationChange($event)"
+                  class="w-full rounded-lg border dark:bg-gray-700 dark:border-gray-600 p-2">
+                  @for (location of visitorLocations(); track location) {
+                    <option [value]="location">{{location}}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Device</label>
+                <select 
+                  [ngModel]="selectedDevice()" 
+                  (ngModelChange)="onDeviceChange($event)"
+                  class="w-full rounded-lg border dark:bg-gray-700 dark:border-gray-600 p-2">
+                  @for (device of visitorDevices(); track device) {
+                    <option [value]="device">{{device}}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Visitors Table -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+      <div class="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+        <h2 class="font-semibold dark:text-white">Recent Visitors</h2>
+        <span class="text-sm text-gray-500">Showing {{filteredVisitors().length}} results</span>
+      </div>
+      
+      @if (loading()) {
+        <div class="p-4">
+          <div class="animate-pulse space-y-4">
+            @for (i of [1,2,3,4,5]; track i) {
+              <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            }
+          </div>
+        </div>
+      } @else if (error()) {
+        <div class="p-8 text-center text-red-500">{{error()}}</div>
+      } @else if (filteredVisitors().length === 0) {
+        <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+          No visitors found matching your filters
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th class="p-4 text-left text-sm font-medium text-gray-500">IP Address</th>
+                <th class="p-4 text-left text-sm font-medium text-gray-500">Browser</th>
+                <th class="p-4 text-left text-sm font-medium text-gray-500">Device</th>
+                <th class="p-4 text-left text-sm font-medium text-gray-500">Location</th>
+                <th class="p-4 text-left text-sm font-medium text-gray-500">Last Visit</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (visitor of filteredVisitors(); track visitor._id) {
+                <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                  <td class="p-4 text-sm dark:text-gray-300">{{visitor.ipAddress || 'Unknown'}}</td>
+                  <td class="p-4 text-sm dark:text-gray-300">{{visitor.browser || 'Unknown'}}</td>
+                  <td class="p-4 text-sm dark:text-gray-300">{{visitor.device || 'Unknown'}}</td>
+                  <td class="p-4 text-sm dark:text-gray-300">{{visitor.location || 'Unknown'}}</td>
+                  <td class="p-4 text-sm dark:text-gray-300">{{visitor.lastVisit | date}}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      
+      <!-- Add Pagination Controls -->
+      @if (!loading() && !error() && filteredVisitors().length > 0) {
+        <div class="px-4 py-3 border-t dark:border-gray-700 flex items-center justify-between">
+          <div class="text-sm text-gray-500 dark:text-gray-400">
+            Page {{selectedPage()}} of {{Math.ceil(totalVisitorsCount() / selectedLimit())}}
+          </div>
+          <div class="flex items-center space-x-2">
+            <button 
+              (click)="previousPage()"
+              [disabled]="!hasPreviousPage()"
+              [class]="'px-3 py-1.5 text-sm rounded-lg transition-colors ' + 
+                (!hasPreviousPage() ? 
+                'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed' : 
+                'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600')"
+            >
+              Previous
+            </button>
+            <button 
+              (click)="nextPage()"
+              [disabled]="!hasNextPage()"
+              [class]="'px-3 py-1.5 text-sm rounded-lg transition-colors ' + 
+                (!hasNextPage() ? 
+                'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed' : 
+                'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600')"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <app-footer></app-footer>
 </div>

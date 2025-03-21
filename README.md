@@ -1,59 +1,54 @@
-# VisitorTrackingDashboard
+# Visitor Tracking Dashboard
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.1.2.
+A modern web application built with Angular and Tailwind CSS to visualize and analyze visitor data across different web projects.
 
-## Development server
+## Overview
 
-To start a local development server, run:
+This dashboard allows you to monitor visitor statistics including browser usage, device types, geographical locations, and visit trends over time. It provides insights into how users interact with your various web projects.
 
-```bash
-ng serve
-```
+## Features
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- **Project-based filtering**: View statistics for specific projects or compare across all projects
+- **Quick Stats**: See total visitors, most used browsers, popular devices, and geographical distribution
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Dark Mode Support**: Toggle between light and dark themes for comfortable viewing
 
-## Code scaffolding
+## Technology Stack
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- **Framework**: Angular 19.1.0
+- **Styling**: Tailwind CSS
+- **Charts**: Chart.js
+- **UI Components**: Angular Material
 
-```bash
-ng generate component component-name
-```
+## Getting Started
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### Prerequisites
 
-```bash
-ng generate --help
-```
+- Node.js (latest LTS version recommended)
+- npm or yarn
 
-## Building
+### Installation
 
-To build the project run:
+1. Clone the repository
 
-```bash
-ng build
-```
+    ```bash
+    git clone https://github.com/manthanank/visitor-tracking-dashboard.git
+    ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+2. Install dependencies:
 
-## Running unit tests
+    ```bash
+    npm install
+    ```
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+3. Start the development server:
 
-```bash
-ng test
-```
+    ```bash
+    ng serve
+    ```
 
-## Running end-to-end tests
+Open your browser and navigate to `http://localhost:4200` to view the dashboard.
 
-For end-to-end (e2e) testing, run:
+## License
 
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

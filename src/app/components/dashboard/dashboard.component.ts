@@ -10,25 +10,25 @@ import {
   Visitor,
   VisitorCount,
   VisitorStatistics,
-  Period,
   VisitorFilters,
 } from '../../models/visitor.model';
 import { VisitorService } from '../../services/visitor.service';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
-import { DatePipe } from '@angular/common';
+import { DatePipe, TitleCasePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { FooterComponent } from "../../shared/footer/footer.component";
+import { FooterComponent } from '../../shared/footer/footer.component';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, DatePipe, FooterComponent],
+  imports: [FormsModule, DatePipe, FooterComponent, TitleCasePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  protected readonly Math = Math;
   visitorCounts = signal<VisitorCount[]>([]);
   selectedProject = signal<string>('');
   selectedLocation = signal<string>('All');
@@ -41,7 +41,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   currentPage = signal<number>(1);
   visitorTrend = signal<any[]>([]);
   visitorStats = signal<VisitorStatistics | null>(null);
-  period = signal<Period>('daily');
+  availableBrowsers = signal<string[]>([
+    'Chrome',
+    'Firefox',
+    'Safari',
+    'Edge',
+    'Other',
+  ]);
+  readonly dateRanges = ['today', 'week', 'month', 'year'] as const;
+  readonly periodOptions = ['daily', 'weekly', 'monthly'] as const;
+  period = signal<(typeof this.periodOptions)[number]>('daily');
   isDarkMode = signal<boolean>(
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
@@ -170,7 +179,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           const counts = [...this.visitorCounts()];
-          const index = counts.findIndex((c) => c.projectName === currentProject);
+          const index = counts.findIndex(
+            (c) => c.projectName === currentProject
+          );
           if (index !== -1) {
             counts[index] = data;
             this.visitorCounts.set(counts);
@@ -242,19 +253,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set(null);
 
-    const sub = this.visitorService
-      .filterVisitors(currentFilters)
-      .subscribe({
-        next: (data) => {
-          this.filteredVisitors.set(data.visitors);
-          this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.error.set('Failed to load filtered visitors');
-          this.loading.set(false);
-        },
-      });
+    const sub = this.visitorService.filterVisitors(currentFilters).subscribe({
+      next: (data) => {
+        this.filteredVisitors.set(data.visitors);
+        this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load filtered visitors');
+        this.loading.set(false);
+      },
+    });
     this.subscriptions.add(sub);
   }
 
@@ -263,7 +272,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return startDate && endDate;
   });
 
-  setDateRange(range: 'today' | 'week' | 'month' | 'year') {
+  setDateRange(range: (typeof this.dateRanges)[number]) {
     const today = new Date();
     const endDate = today.toISOString().split('T')[0];
     let startDate: string;
@@ -357,7 +366,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadProjectData();
   }
 
-  onPeriodChange(newPeriod: Period) {
+  onPeriodChange(newPeriod: (typeof this.periodOptions)[number]) {
     this.period.set(newPeriod);
     this.loadProjectData();
   }
@@ -387,9 +396,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   hasNextPage = computed(() => {
-    const { page, limit } = this.filters();
-    const total = this.totalVisitorsCount();
-    return total > (page ?? 0) * (limit ?? 0);
+    const totalPages = Math.ceil(
+      this.totalVisitorsCount() / this.selectedLimit()
+    );
+    return this.selectedPage() < totalPages;
   });
 
   toggleDarkMode() {
