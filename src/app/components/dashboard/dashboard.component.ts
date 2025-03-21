@@ -10,25 +10,27 @@ import {
   Visitor,
   VisitorCount,
   VisitorStatistics,
+  Period,
   VisitorFilters,
+  VisitorGrowth,
 } from '../../models/visitor.model';
 import { VisitorService } from '../../services/visitor.service';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
-import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { FooterComponent } from '../../shared/footer/footer.component';
+import { FooterComponent } from "../../shared/footer/footer.component";
+import { HeaderComponent } from "../../shared/header/header.component";
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
-  imports: [FormsModule, DatePipe, FooterComponent, TitleCasePipe],
+  imports: [FormsModule, DatePipe, FooterComponent, HeaderComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  protected readonly Math = Math;
   visitorCounts = signal<VisitorCount[]>([]);
   selectedProject = signal<string>('');
   selectedLocation = signal<string>('All');
@@ -41,16 +43,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   currentPage = signal<number>(1);
   visitorTrend = signal<any[]>([]);
   visitorStats = signal<VisitorStatistics | null>(null);
-  availableBrowsers = signal<string[]>([
-    'Chrome',
-    'Firefox',
-    'Safari',
-    'Edge',
-    'Other',
-  ]);
-  readonly dateRanges = ['today', 'week', 'month', 'year'] as const;
-  readonly periodOptions = ['daily', 'weekly', 'monthly'] as const;
-  period = signal<(typeof this.periodOptions)[number]>('daily');
+  period = signal<Period>('daily');
   isDarkMode = signal<boolean>(
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
@@ -58,9 +51,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   visitorLocations = signal<any[]>([]);
   visitorDevices = signal<any[]>([]);
   trendChart: Chart | null = null;
+  browserStats = signal<any[]>([]);
+  osStats = signal<any[]>([]);
+  browserChart: Chart | null = null;
+  osChart: Chart | null = null;
+  visitorGrowth = signal<VisitorGrowth[]>([]);
+  growthChart: Chart | null = null;
   private subscriptions: Subscription = new Subscription();
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
+  activeVisitors = signal<number>(0);
 
   private getLocaleDateString(date: Date): string {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -112,6 +112,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadVisitorCounts();
+    this.loadActiveVisitors();
+    
+    // Refresh active visitors count every minute
+    const intervalId = setInterval(() => this.loadActiveVisitors(), 60000);
+    
+    // Clear interval on component destroy
+    this.subscriptions.add({
+      unsubscribe: () => clearInterval(intervalId)
+    } as Subscription);
   }
 
   ngOnDestroy() {
@@ -179,9 +188,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           const counts = [...this.visitorCounts()];
-          const index = counts.findIndex(
-            (c) => c.projectName === currentProject
-          );
+          const index = counts.findIndex((c) => c.projectName === currentProject);
           if (index !== -1) {
             counts[index] = data;
             this.visitorCounts.set(counts);
@@ -196,6 +203,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadFilteredVisitors();
     this.loadVisitorLocations();
     this.loadVisitorDevices();
+    this.loadBrowserOsStats();
+    this.loadVisitorGrowth();
   }
 
   loadVisitorLocations() {
@@ -253,17 +262,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set(null);
 
-    const sub = this.visitorService.filterVisitors(currentFilters).subscribe({
-      next: (data) => {
-        this.filteredVisitors.set(data.visitors);
-        this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load filtered visitors');
-        this.loading.set(false);
-      },
-    });
+    const sub = this.visitorService
+      .filterVisitors(currentFilters)
+      .subscribe({
+        next: (data) => {
+          this.filteredVisitors.set(data.visitors);
+          this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set('Failed to load filtered visitors');
+          this.loading.set(false);
+        },
+      });
     this.subscriptions.add(sub);
   }
 
@@ -272,7 +283,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return startDate && endDate;
   });
 
-  setDateRange(range: (typeof this.dateRanges)[number]) {
+  setDateRange(range: 'today' | 'week' | 'month' | 'year') {
     const today = new Date();
     const endDate = today.toISOString().split('T')[0];
     let startDate: string;
@@ -366,7 +377,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadProjectData();
   }
 
-  onPeriodChange(newPeriod: (typeof this.periodOptions)[number]) {
+  onPeriodChange(newPeriod: Period) {
     this.period.set(newPeriod);
     this.loadProjectData();
   }
@@ -396,10 +407,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   hasNextPage = computed(() => {
-    const totalPages = Math.ceil(
-      this.totalVisitorsCount() / this.selectedLimit()
-    );
-    return this.selectedPage() < totalPages;
+    const { page, limit } = this.filters();
+    const total = this.totalVisitorsCount();
+    return total > (page ?? 0) * (limit ?? 0);
   });
 
   toggleDarkMode() {
@@ -413,5 +423,234 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else {
       document.documentElement.classList.remove('dark');
     }
+  }
+
+  exportData(format: 'json' | 'csv') {
+    this.loading.set(true);
+    
+    const sub = this.visitorService.exportVisitors(format).subscribe({
+      next: (data) => {
+        if (format === 'csv') {
+          // For CSV, create a blob and download it
+          const blob = new Blob([data], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `visitor-data-${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          // For JSON, create a blob and download it
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `visitor-data-${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(`Failed to export data as ${format.toUpperCase()}`);
+        this.loading.set(false);
+      }
+    });
+    
+    this.subscriptions.add(sub);
+  }
+
+  loadActiveVisitors() {
+    const sub = this.visitorService.getActiveVisitors(5).subscribe({
+      next: (data) => {
+        // Check if data is an array (API returning directly an array instead of object with activeVisitors property)
+        if (Array.isArray(data)) {
+          this.activeVisitors.set(data.length);
+        } 
+        // Check for the expected object structure
+        else if (data && data.activeVisitors) {
+          this.activeVisitors.set(data.activeVisitors.length);
+        } 
+        // Fallback to 0 if neither format is available
+        else {
+          this.activeVisitors.set(0);
+          console.warn('Received unexpected data format for active visitors:', data);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load active visitors', err);
+        this.activeVisitors.set(0);
+      }
+    });
+    this.subscriptions.add(sub);
+  }
+
+  loadBrowserOsStats() {
+    this.loading.set(true);
+    const sub = this.visitorService.getBrowserOsStats().subscribe({
+      next: (data) => {
+        if (data) {
+          this.browserStats.set(data.browserStats || []);
+          this.osStats.set(data.osStats || []);
+          this.updateBrowserChart();
+          this.updateOsChart();
+        } else {
+          console.warn('Received unexpected data format for browser/OS stats');
+          this.browserStats.set([]);
+          this.osStats.set([]);
+        }
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load browser/OS statistics');
+        this.loading.set(false);
+        this.browserStats.set([]);
+        this.osStats.set([]);
+      }
+    });
+    this.subscriptions.add(sub);
+  }
+
+  updateBrowserChart() {
+    if (this.browserChart) {
+      this.browserChart.destroy();
+    }
+
+    const ctx = document.getElementById('browserChart') as HTMLCanvasElement;
+    const isDark = this.isDarkMode();
+    
+    this.browserChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: this.browserStats().map(item => item._id),
+        datasets: [{
+          data: this.browserStats().map(item => item.count),
+          backgroundColor: [
+            'rgb(255, 99, 132)',
+            'rgb(54, 162, 235)',
+            'rgb(255, 206, 86)',
+            'rgb(75, 192, 192)',
+            'rgb(153, 102, 255)'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: isDark ? '#fff' : '#666'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  updateOsChart() {
+    if (this.osChart) {
+      this.osChart.destroy();
+    }
+
+    const ctx = document.getElementById('osChart') as HTMLCanvasElement;
+    const isDark = this.isDarkMode();
+    
+    this.osChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: this.osStats().map(item => item._id),
+        datasets: [{
+          data: this.osStats().map(item => item.count),
+          backgroundColor: [
+            'rgb(255, 99, 132)',
+            'rgb(54, 162, 235)',
+            'rgb(255, 206, 86)',
+            'rgb(75, 192, 192)',
+            'rgb(153, 102, 255)'
+          ]
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: isDark ? '#fff' : '#666'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  loadVisitorGrowth() {
+    const sub = this.visitorService.getVisitorGrowth().subscribe({
+      next: (data) => {
+        this.visitorGrowth.set(data);
+        this.updateGrowthChart();
+      },
+      error: (err) => {
+        this.error.set('Failed to load visitor growth data');
+      }
+    });
+    this.subscriptions.add(sub);
+  }
+
+  updateGrowthChart() {
+    if (this.growthChart) {
+      this.growthChart.destroy();
+    }
+
+    const ctx = document.getElementById('growthChart') as HTMLCanvasElement;
+    const isDark = this.isDarkMode();
+    
+    this.growthChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: this.visitorGrowth().map(item => item._id),
+        datasets: [{
+          label: 'Monthly Growth',
+          data: this.visitorGrowth().map(item => item.count),
+          backgroundColor: isDark ? 'rgba(147, 197, 253, 0.7)' : 'rgba(75, 192, 192, 0.7)',
+          borderColor: isDark ? 'rgb(147, 197, 253)' : 'rgb(75, 192, 192)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            },
+            ticks: {
+              color: isDark ? '#fff' : '#666',
+            }
+          },
+          x: {
+            grid: {
+              color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            },
+            ticks: {
+              color: isDark ? '#fff' : '#666',
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: isDark ? '#fff' : '#666',
+            }
+          }
+        }
+      }
+    });
   }
 }
