@@ -5,6 +5,7 @@ import {
   signal,
   computed,
   effect,
+  inject,
 } from '@angular/core';
 import {
   Visitor,
@@ -21,8 +22,8 @@ import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { FooterComponent } from "../../shared/footer/footer.component";
-import { HeaderComponent } from "../../shared/header/header.component";
+import { FooterComponent } from '../../shared/footer/footer.component';
+import { HeaderComponent } from '../../shared/header/header.component';
 
 Chart.register(...registerables);
 
@@ -67,6 +68,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
   activeVisitors = signal<number>(0);
+  private visitorService = inject(VisitorService);
 
   private getLocaleDateString(date: Date): string {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -110,7 +112,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.visitorStats()?.mostVisitedLocation || '';
   });
 
-  constructor(private visitorService: VisitorService) {
+  constructor() {
     effect(() => {
       this.applyTheme();
     });
@@ -120,13 +122,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadVisitorCounts();
     this.loadActiveVisitors();
     this.loadDailyStats();
-    
+
     // Refresh active visitors count every minute
     const intervalId = setInterval(() => this.loadActiveVisitors(), 60000);
-    
+
     // Clear interval on component destroy
     this.subscriptions.add({
-      unsubscribe: () => clearInterval(intervalId)
+      unsubscribe: () => clearInterval(intervalId),
     } as Subscription);
   }
 
@@ -209,7 +211,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           const counts = [...this.visitorCounts()];
-          const index = counts.findIndex((c) => c.projectName === currentProject);
+          const index = counts.findIndex(
+            (c) => c.projectName === currentProject
+          );
           if (index !== -1) {
             counts[index] = data;
             this.visitorCounts.set(counts);
@@ -283,19 +287,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set(null);
 
-    const sub = this.visitorService
-      .filterVisitors(currentFilters)
-      .subscribe({
-        next: (data) => {
-          this.filteredVisitors.set(data.visitors);
-          this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.error.set('Failed to load filtered visitors');
-          this.loading.set(false);
-        },
-      });
+    const sub = this.visitorService.filterVisitors(currentFilters).subscribe({
+      next: (data) => {
+        this.filteredVisitors.set(data.visitors);
+        this.totalVisitorsCount.set(data.totalVisitors); // Ensure totalVisitorsCount is set
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load filtered visitors');
+        this.loading.set(false);
+      },
+    });
     this.subscriptions.add(sub);
   }
 
@@ -452,7 +454,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   exportData(format: 'json' | 'csv') {
     this.loading.set(true);
-    
+
     const sub = this.visitorService.exportVisitors(format).subscribe({
       next: (data) => {
         if (format === 'csv') {
@@ -461,18 +463,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `visitor-data-${new Date().toISOString().split('T')[0]}.csv`;
+          a.download = `visitor-data-${
+            new Date().toISOString().split('T')[0]
+          }.csv`;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
           document.body.removeChild(a);
         } else {
           // For JSON, create a blob and download it
-          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: 'application/json',
+          });
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `visitor-data-${new Date().toISOString().split('T')[0]}.json`;
+          a.download = `visitor-data-${
+            new Date().toISOString().split('T')[0]
+          }.json`;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
@@ -483,9 +491,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.error.set(`Failed to export data as ${format.toUpperCase()}`);
         this.loading.set(false);
-      }
+      },
     });
-    
+
     this.subscriptions.add(sub);
   }
 
@@ -495,21 +503,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
         // Check if data is an array (API returning directly an array instead of object with activeVisitors property)
         if (Array.isArray(data)) {
           this.activeVisitors.set(data.length);
-        } 
+        }
         // Check for the expected object structure
         else if (data && data.activeVisitors) {
           this.activeVisitors.set(data.activeVisitors.length);
-        } 
+        }
         // Fallback to 0 if neither format is available
         else {
           this.activeVisitors.set(0);
-          console.warn('Received unexpected data format for active visitors:', data);
+          console.warn(
+            'Received unexpected data format for active visitors:',
+            data
+          );
         }
       },
       error: (err) => {
         console.error('Failed to load active visitors', err);
         this.activeVisitors.set(0);
-      }
+      },
     });
     this.subscriptions.add(sub);
   }
@@ -535,7 +546,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         this.browserStats.set([]);
         this.osStats.set([]);
-      }
+      },
     });
     this.subscriptions.add(sub);
   }
@@ -547,21 +558,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     const ctx = document.getElementById('browserChart') as HTMLCanvasElement;
     const isDark = this.isDarkMode();
-    
+
     this.browserChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: this.browserStats().map(item => item._id),
-        datasets: [{
-          data: this.browserStats().map(item => item.count),
-          backgroundColor: [
-            'rgb(255, 99, 132)',
-            'rgb(54, 162, 235)',
-            'rgb(255, 206, 86)',
-            'rgb(75, 192, 192)',
-            'rgb(153, 102, 255)'
-          ]
-        }]
+        labels: this.browserStats().map((item) => item._id),
+        datasets: [
+          {
+            data: this.browserStats().map((item) => item.count),
+            backgroundColor: [
+              'rgb(255, 99, 132)',
+              'rgb(54, 162, 235)',
+              'rgb(255, 206, 86)',
+              'rgb(75, 192, 192)',
+              'rgb(153, 102, 255)',
+            ],
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -569,11 +582,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
           legend: {
             position: 'right',
             labels: {
-              color: isDark ? '#fff' : '#666'
-            }
-          }
-        }
-      }
+              color: isDark ? '#fff' : '#666',
+            },
+          },
+        },
+      },
     });
   }
 
@@ -584,21 +597,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     const ctx = document.getElementById('osChart') as HTMLCanvasElement;
     const isDark = this.isDarkMode();
-    
+
     this.osChart = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: this.osStats().map(item => item._id),
-        datasets: [{
-          data: this.osStats().map(item => item.count),
-          backgroundColor: [
-            'rgb(255, 99, 132)',
-            'rgb(54, 162, 235)',
-            'rgb(255, 206, 86)',
-            'rgb(75, 192, 192)',
-            'rgb(153, 102, 255)'
-          ]
-        }]
+        labels: this.osStats().map((item) => item._id),
+        datasets: [
+          {
+            data: this.osStats().map((item) => item.count),
+            backgroundColor: [
+              'rgb(255, 99, 132)',
+              'rgb(54, 162, 235)',
+              'rgb(255, 206, 86)',
+              'rgb(75, 192, 192)',
+              'rgb(153, 102, 255)',
+            ],
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -606,11 +621,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
           legend: {
             position: 'right',
             labels: {
-              color: isDark ? '#fff' : '#666'
-            }
-          }
-        }
-      }
+              color: isDark ? '#fff' : '#666',
+            },
+          },
+        },
+      },
     });
   }
 
@@ -622,7 +637,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.error.set('Failed to load visitor growth data');
-      }
+      },
     });
     this.subscriptions.add(sub);
   }
@@ -634,18 +649,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     const ctx = document.getElementById('growthChart') as HTMLCanvasElement;
     const isDark = this.isDarkMode();
-    
+
     this.growthChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: this.visitorGrowth().map(item => item._id),
-        datasets: [{
-          label: 'Monthly Growth',
-          data: this.visitorGrowth().map(item => item.count),
-          backgroundColor: isDark ? 'rgba(147, 197, 253, 0.7)' : 'rgba(75, 192, 192, 0.7)',
-          borderColor: isDark ? 'rgb(147, 197, 253)' : 'rgb(75, 192, 192)',
-          borderWidth: 1
-        }]
+        labels: this.visitorGrowth().map((item) => item._id),
+        datasets: [
+          {
+            label: 'Monthly Growth',
+            data: this.visitorGrowth().map((item) => item.count),
+            backgroundColor: isDark
+              ? 'rgba(147, 197, 253, 0.7)'
+              : 'rgba(75, 192, 192, 0.7)',
+            borderColor: isDark ? 'rgb(147, 197, 253)' : 'rgb(75, 192, 192)',
+            borderWidth: 1,
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -657,7 +676,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             ticks: {
               color: isDark ? '#fff' : '#666',
-            }
+            },
           },
           x: {
             grid: {
@@ -665,40 +684,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             ticks: {
               color: isDark ? '#fff' : '#666',
-            }
-          }
+            },
+          },
         },
         plugins: {
           legend: {
             labels: {
               color: isDark ? '#fff' : '#666',
-            }
-          }
-        }
-      }
+            },
+          },
+        },
+      },
     });
   }
 
   loadDailyStats() {
     this.loading.set(true);
     this.error.set(null);
-    
-    const sub = this.visitorService.getDailyStats(
-      this.selectedProject() || 'All', 
-      this.selectedDays()
-    ).subscribe({
-      next: (data) => {
-        this.dailyStatsData.set(data);
-        this.dailyStats.set(data.dailyStats);
-        this.updateDailyStatsChart();
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set('Failed to load daily statistics');
-        this.loading.set(false);
-      }
-    });
-    
+
+    const sub = this.visitorService
+      .getDailyStats(this.selectedProject() || 'All', this.selectedDays())
+      .subscribe({
+        next: (data) => {
+          this.dailyStatsData.set(data);
+          this.dailyStats.set(data.dailyStats);
+          this.updateDailyStatsChart();
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set('Failed to load daily statistics');
+          this.loading.set(false);
+        },
+      });
+
     this.subscriptions.add(sub);
   }
 
@@ -711,26 +729,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.dailyStatsChart) {
       this.dailyStatsChart.destroy();
     }
-    
+
     const ctx = document.getElementById('dailyStatsChart') as HTMLCanvasElement;
     if (!ctx) return;
-    
+
     const isDark = this.isDarkMode();
     const data = this.dailyStats();
-    
+
     this.dailyStatsChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: data.map(item => item.date),
+        labels: data.map((item) => item.date),
         datasets: [
           {
             label: 'Unique Visitors',
-            data: data.map(item => item.uniqueVisitors),
-            backgroundColor: isDark ? 'rgba(54, 162, 235, 0.7)' : 'rgba(54, 162, 235, 0.7)',
+            data: data.map((item) => item.uniqueVisitors),
+            backgroundColor: isDark
+              ? 'rgba(54, 162, 235, 0.7)'
+              : 'rgba(54, 162, 235, 0.7)',
             borderColor: isDark ? 'rgb(54, 162, 235)' : 'rgb(54, 162, 235)',
-            borderWidth: 1
-          }
-        ]
+            borderWidth: 1,
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -742,7 +762,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             ticks: {
               color: isDark ? '#fff' : '#666',
-            }
+            },
           },
           x: {
             grid: {
@@ -750,26 +770,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             ticks: {
               color: isDark ? '#fff' : '#666',
-            }
-          }
+            },
+          },
         },
         plugins: {
           legend: {
             labels: {
               color: isDark ? '#fff' : '#666',
-            }
+            },
           },
           tooltip: {
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const label = context.dataset.label || '';
                 const value = context.parsed.y || 0;
                 return `${label}: ${value}`;
-              }
-            }
-          }
-        }
-      }
+              },
+            },
+          },
+        },
+      },
     });
   }
 }
