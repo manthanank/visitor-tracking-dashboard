@@ -73,6 +73,29 @@
                     <canvas id="trendChart" class="w-full"></canvas>
                 </div>
 
+                <!-- Daily Statistics -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="font-semibold dark:text-white">Daily Statistics</h2>
+                            @if (dailyStatsData()) {
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Total: {{dailyStatsData()?.totalVisitors || 0}} unique visitors 
+                                ({{dailyStatsData()?.period?.startDate || 'N/A'}} to {{dailyStatsData()?.period?.endDate || 'N/A'}})
+                            </p>
+                            }
+                        </div>
+                        <select [ngModel]="selectedDays()" (ngModelChange)="onDaysChange($event)"
+                            class="rounded border p-2 dark:bg-gray-700 dark:text-white">
+                            <option [value]="7">Last 7 days</option>
+                            <option [value]="14">Last 14 days</option>
+                            <option [value]="30">Last 30 days</option>
+                            <option [value]="90">Last 90 days</option>
+                        </select>
+                    </div>
+                    <canvas id="dailyStatsChart" class="w-full"></canvas>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                         <h2 class="font-semibold mb-4 dark:text-white">Browser Distribution</h2>

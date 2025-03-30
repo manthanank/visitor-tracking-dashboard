@@ -13,6 +13,8 @@ import {
   Period,
   VisitorFilters,
   VisitorGrowth,
+  DailyStat,
+  DailyStats,
 } from '../../models/visitor.model';
 import { VisitorService } from '../../services/visitor.service';
 import { FormsModule } from '@angular/forms';
@@ -57,6 +59,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   osChart: Chart | null = null;
   visitorGrowth = signal<VisitorGrowth[]>([]);
   growthChart: Chart | null = null;
+  dailyStatsData = signal<DailyStats | null>(null);
+  dailyStats = signal<DailyStat[]>([]);
+  selectedDays = signal<number>(7);
+  dailyStatsChart: Chart | null = null;
   private subscriptions: Subscription = new Subscription();
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
@@ -113,6 +119,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadVisitorCounts();
     this.loadActiveVisitors();
+    this.loadDailyStats();
     
     // Refresh active visitors count every minute
     const intervalId = setInterval(() => this.loadActiveVisitors(), 60000);
@@ -126,6 +133,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.trendChart) {
       this.trendChart.destroy();
+    }
+    if (this.dailyStatsChart) {
+      this.dailyStatsChart.destroy();
+    }
+    if (this.browserChart) {
+      this.browserChart.destroy();
+    }
+    if (this.osChart) {
+      this.osChart.destroy();
+    }
+    if (this.growthChart) {
+      this.growthChart.destroy();
     }
     this.subscriptions.unsubscribe();
   }
@@ -155,6 +174,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.loading.set(true);
     this.error.set(null);
+
+    this.loadDailyStats();
 
     const trendSub = this.visitorService
       .getVisitorTrend(currentProject, this.period())
@@ -415,6 +436,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   toggleDarkMode() {
     this.isDarkMode.update((current) => !current);
     this.updateTrendChart();
+    this.updateBrowserChart();
+    this.updateOsChart();
+    this.updateGrowthChart();
+    this.updateDailyStatsChart();
   }
 
   private applyTheme() {
@@ -647,6 +672,100 @@ export class DashboardComponent implements OnInit, OnDestroy {
           legend: {
             labels: {
               color: isDark ? '#fff' : '#666',
+            }
+          }
+        }
+      }
+    });
+  }
+
+  loadDailyStats() {
+    this.loading.set(true);
+    this.error.set(null);
+    
+    const sub = this.visitorService.getDailyStats(
+      this.selectedProject() || 'All', 
+      this.selectedDays()
+    ).subscribe({
+      next: (data) => {
+        this.dailyStatsData.set(data);
+        this.dailyStats.set(data.dailyStats);
+        this.updateDailyStatsChart();
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to load daily statistics');
+        this.loading.set(false);
+      }
+    });
+    
+    this.subscriptions.add(sub);
+  }
+
+  onDaysChange(days: number) {
+    this.selectedDays.set(days);
+    this.loadDailyStats();
+  }
+
+  updateDailyStatsChart() {
+    if (this.dailyStatsChart) {
+      this.dailyStatsChart.destroy();
+    }
+    
+    const ctx = document.getElementById('dailyStatsChart') as HTMLCanvasElement;
+    if (!ctx) return;
+    
+    const isDark = this.isDarkMode();
+    const data = this.dailyStats();
+    
+    this.dailyStatsChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(item => item.date),
+        datasets: [
+          {
+            label: 'Unique Visitors',
+            data: data.map(item => item.uniqueVisitors),
+            backgroundColor: isDark ? 'rgba(54, 162, 235, 0.7)' : 'rgba(54, 162, 235, 0.7)',
+            borderColor: isDark ? 'rgb(54, 162, 235)' : 'rgb(54, 162, 235)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            },
+            ticks: {
+              color: isDark ? '#fff' : '#666',
+            }
+          },
+          x: {
+            grid: {
+              color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            },
+            ticks: {
+              color: isDark ? '#fff' : '#666',
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: isDark ? '#fff' : '#666',
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.dataset.label || '';
+                const value = context.parsed.y || 0;
+                return `${label}: ${value}`;
+              }
             }
           }
         }

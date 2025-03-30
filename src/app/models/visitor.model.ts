@@ -75,6 +75,7 @@ export interface DailyActiveUsers {
   period: {
     startDate: string;
     endDate: string;
+    days: number;
   };
   dailyActiveUsers: Array<{
     date: string;
@@ -94,4 +95,20 @@ export interface BrowserOsStats {
 export interface VisitorGrowth {
   _id: string;
   count: number;
+}
+
+export interface DailyStats {
+  projectName: string;
+  period: {
+    startDate: string;
+    endDate: string;
+    days: number;
+  };
+  dailyStats: DailyStat[];
+  totalVisitors: number;
+}
+
+export interface DailyStat {
+  date: string;
+  uniqueVisitors: number;
 }

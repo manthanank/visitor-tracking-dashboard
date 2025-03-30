@@ -17,8 +17,10 @@ import {
   VisitorsByDateRange,
   VisitorByIp,
   DailyActiveUsers,
+  DailyStats,
 } from '../models/visitor.model';
 import { environment } from '../../environments/environment';
+
 
 @Injectable({
   providedIn: 'root',
@@ -149,5 +151,13 @@ export class VisitorService {
 
   getVisitorGrowth(): Observable<VisitorGrowth[]> {
     return this.http.get<VisitorGrowth[]>(`${this.apiUrl}/visitor-growth`);
+  }
+
+  getDailyStats(projectName: string, days: number = 7): Observable<DailyStats> {
+    let params = new HttpParams();
+    if (days && days !== 7) {
+      params = params.set('days', days.toString());
+    }
+    return this.http.get<DailyStats>(`${this.apiUrl}/daily-stats/${projectName}`, { params });
   }
 }
