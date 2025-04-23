@@ -31,7 +31,6 @@ Chart.register(...registerables);
   selector: 'app-dashboard',
   imports: [FormsModule, DatePipe, FooterComponent, HeaderComponent],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   visitorCounts = signal<VisitorCount[]>([]);
